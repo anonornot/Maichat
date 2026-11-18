@@ -878,6 +878,15 @@ class _ChatScreenState extends State<ChatScreen> {
     // ones apply.
     final ui = state.interfaceFor(conversation);
     final bg = ui.backgroundColor != null ? Color(ui.backgroundColor!) : null;
+    // The background picture is ranked the same way everywhere: the chat's own,
+    // then the character's (read through `characterFor` so a per-chat override
+    // of the card is what shows here too), then the interface's. A character
+    // background wears the interface's opacity — it is a look-level picture,
+    // and the chat's opacity slider stays meaningful only for the chat's own.
+    final characterBackground = state
+        .characterFor(conversation, conversation.characterId)
+        ?.backgroundImage
+        .trim() ?? '';
     // The expressive composer floats over the thread; the legacy send bar keeps
     // its slot in the column below it. Only the floating one needs its resting
     // height measured, and only it reserves room at the thread's bottom.
@@ -959,14 +968,11 @@ class _ChatScreenState extends State<ChatScreen> {
           asideArrowOpacity: state.btwSettings.mainChatArrowOpacity,
           background: ColoredBox(
             color: bg ?? Theme.of(context).scaffoldBackgroundColor,
-            child: (conversation.backgroundImage ?? ui.backgroundImage) == null
-                ? null
-                : _ChatBackground(
-                    image: conversation.backgroundImage ?? ui.backgroundImage!,
-                    opacity: conversation.backgroundImage != null
-                        ? conversation.backgroundOpacity
-                        : ui.backgroundOpacity,
-                  ),
+            child: _backgroundFor(
+              conversation: conversation,
+              ui: ui,
+              characterBackground: characterBackground,
+            ),
           ),
           onAsideOpen: _setAsideOpen,
           onAsideVisible: (visible) {
@@ -2876,6 +2882,37 @@ class _AttachPreview extends StatelessWidget {
 
 /// The picture behind one chat, drawn edge to edge under the thread.
 ///
+/// The chat's background picture layer, or null when there is none. The one
+/// place the three sources are ranked: the chat's own [Conversation.backgroundImage]
+/// wins, then the character's, then the interface look's. Whichever source
+/// supplies the picture also supplies its opacity — the chat's own is the only
+/// one the reader can tune per chat, so it stays meaningful.
+_ChatBackground? _backgroundFor({
+  required Conversation conversation,
+  required ChatInterface ui,
+  required String characterBackground,
+}) {
+  if (conversation.backgroundImage != null) {
+    return _ChatBackground(
+      image: conversation.backgroundImage!,
+      opacity: conversation.backgroundOpacity,
+    );
+  }
+  if (characterBackground.isNotEmpty) {
+    return _ChatBackground(
+      image: characterBackground,
+      opacity: ui.backgroundOpacity,
+    );
+  }
+  if (ui.backgroundImage != null) {
+    return _ChatBackground(
+      image: ui.backgroundImage!,
+      opacity: ui.backgroundOpacity,
+    );
+  }
+  return null;
+}
+
 /// [opacity] is the point of the whole thing: a photograph at full strength
 /// behind running text is unreadable, so the picture is faded towards whatever
 /// the chat's background colour is. A reference that no longer resolves (the

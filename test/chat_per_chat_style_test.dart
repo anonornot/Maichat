@@ -100,4 +100,69 @@ void main() {
 
     expect(find.byType(Image), findsNothing);
   });
+
+  testWidgets("a character's background is drawn behind their chat",
+      (tester) async {
+    final state = await chat();
+    state.characterById(state.active.characterId)!
+      ..backgroundImage = 'https://example.com/char-bg.png'
+      ..avatar = ''; // the avatar is an Image too — keep it out of the way.
+
+    await tester.pumpWidget(host(state));
+    await tester.pump();
+    await tester.pump();
+
+    final image = find.byType(Image);
+    expect(image, findsOneWidget);
+    expect(backgroundUrl(tester), 'https://example.com/char-bg.png');
+  });
+
+  testWidgets("the chat's own background outranks the character's",
+      (tester) async {
+    final state = await chat();
+    state.characterById(state.active.characterId)!
+      ..backgroundImage = 'https://example.com/char-bg.png'
+      ..avatar = '';
+    await state.setChatBackground(
+      state.active.id,
+      'https://example.com/chat-bg.png',
+      opacity: 0.3,
+    );
+
+    await tester.pumpWidget(host(state));
+    await tester.pump();
+    await tester.pump();
+
+    final widget = tester.widget<Image>(find.byType(Image));
+    expect(backgroundUrl(tester), 'https://example.com/chat-bg.png');
+    expect(widget.opacity?.value, 0.3);
+  });
+
+  testWidgets("a character's background outranks the interface look's",
+      (tester) async {
+    final state = await chat();
+    state.characterById(state.active.characterId)!
+      ..backgroundImage = 'https://example.com/char-bg.png'
+      ..avatar = '';
+    await state.updateChatInterface(
+      state.chatInterface.copyWith(
+        backgroundImage: 'https://example.com/ui-bg.png',
+      ),
+    );
+
+    await tester.pumpWidget(host(state));
+    await tester.pump();
+    await tester.pump();
+
+    expect(backgroundUrl(tester), 'https://example.com/char-bg.png');
+  });
+}
+
+/// Which URL the chat's background `Image` is drawing. The provider is a
+/// `ResizeImage` (what `avatarImage` wraps every provider in for cache
+/// sizing); the `NetworkImage` inside it carries the URL.
+String? backgroundUrl(WidgetTester tester) {
+  final provider = tester.widget<Image>(find.byType(Image)).image;
+  final inner = provider is ResizeImage ? provider.imageProvider : provider;
+  return inner is NetworkImage ? inner.url : null;
 }

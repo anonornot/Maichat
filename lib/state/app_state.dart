@@ -1847,6 +1847,13 @@ class AppState extends ChangeNotifier {
       final adopted = await store.adopt(character.avatars[i]);
       if (adopted != character.avatars[i]) character.avatars[i] = adopted;
     }
+    // The background is picked from a file or the gallery in both editors, so it
+    // arrives as a ref — but a hand-built export or a legacy draft can still put
+    // base64 here, and it goes the same place the avatar does.
+    final background = await store.adopt(character.backgroundImage);
+    if (background != character.backgroundImage) {
+      character.backgroundImage = background;
+    }
   }
 
   Future<void> deleteCharacter(String id) async {
@@ -1909,6 +1916,9 @@ class AppState extends ChangeNotifier {
     await store.sweep([
       ..._characters.map((c) => c.avatar),
       ..._characters.expand((c) => c.avatars),
+      // A character's chat background is a stored picture like every other one
+      // and only the card names it.
+      ..._characters.map((c) => c.backgroundImage),
       ..._lorebooks.map((b) => b.thumbnail),
       ..._gallery.map((g) => g.image),
       ..._chatInterface.pictureRefs,

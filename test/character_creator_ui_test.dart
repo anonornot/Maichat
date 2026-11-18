@@ -475,6 +475,64 @@ void main() {
       await goTo(tester, 'Persona');
       expect(textOf(tester, 'creator-description'), 'A dockworker.');
     });
+
+    testWidgets('a card with a background carries it through an edit',
+        (tester) async {
+      tall(tester);
+      final state = await boot();
+      final card = Character(
+        id: 'c',
+        name: 'Serina',
+        backgroundImage: 'local:scene.png',
+      );
+      await state.addCharacter(card);
+      await open(tester, state, character: card);
+
+      // The row shows what is set, and the sheet offers both sources plus the
+      // way back out.
+      expect(find.byKey(const Key('creator-background-card')), findsOneWidget);
+      expect(find.text('A picture of this character\'s own'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('creator-background-card')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('creator-background-gallery')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('creator-background-device')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('creator-background-remove')),
+        findsOneWidget,
+      );
+
+      // Leave the sheet alone — the background survives an untouched edit.
+      await dismissSheet(tester);
+      await tester.tap(find.byKey(const Key('creator-save')));
+      await tester.pumpAndSettle();
+
+      expect(state.characterById('c')!.backgroundImage, 'local:scene.png');
+    });
+
+    testWidgets('a card without a background offers no Remove', (tester) async {
+      tall(tester);
+      final state = await boot();
+      await open(tester, state);
+
+      await tester.enterText(boxOf('creator-name'), 'Serina');
+      await tester.tap(find.byKey(const Key('creator-background-card')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('creator-background-remove')),
+        findsNothing,
+      );
+      await dismissSheet(tester);
+      await tester.tap(find.byKey(const Key('creator-save')));
+      await tester.pumpAndSettle();
+
+      expect(state.characters.single.backgroundImage, isEmpty);
+    });
   });
 
   group('backing out', () {

@@ -2,11 +2,12 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' hide Provider;
 
 import '../models/character.dart';
 import '../state/app_state.dart';
 import '../widgets/avatar_image.dart';
+import 'gallery/gallery_picker_sheet.dart';
 
 /// Create or edit a character. Passed a [character] it edits in place;
 /// otherwise it builds a fresh one. Fields are grouped into calm sections
@@ -62,6 +63,12 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
   /// Set when the user explicitly clears the avatar.
   bool _removed = false;
 
+  /// The background picture chats with this character wear, as a stored ref
+  /// (`local:<file>` or an URL). Both pickers hand back a reference — a device
+  /// file is stored the moment it is picked — so unlike the avatar there is
+  /// never base64 to carry to Save.
+  String? _background;
+
   bool get _isNew => widget.character == null;
 
   @override
@@ -69,6 +76,7 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
     super.initState();
     final c = widget.character;
     _originalAvatar = c?.avatar ?? '';
+    _background = c?.backgroundImage.trim() == '' ? null : c?.backgroundImage;
     _name = TextEditingController(text: c?.name ?? '');
     // Only surface a URL avatar for editing; a base64 card image is kept
     // silently via [_originalAvatar].
@@ -108,6 +116,79 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
       _removed = false;
       _avatar.clear(); // a picked image takes over from any typed URL
     });
+  }
+
+  /// The background chooser: a picture kept in the app's gallery, or a file off
+  /// the device — the same two sources the chat's own background offers. A
+  /// device file is written to the pictures directory straight away and only
+  /// its reference is held until Save.
+  Future<void> _pickBackground() async {
+    final source = await showModalBottomSheet<_BackgroundSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const Key('edit-background-gallery'),
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('App gallery'),
+              subtitle: const Text('A picture already in MaiChat'),
+              onTap: () => Navigator.of(sheetContext)
+                  .pop(_BackgroundSource.gallery),
+            ),
+            ListTile(
+              key: const Key('edit-background-device'),
+              leading: const Icon(Icons.smartphone_outlined),
+              title: const Text('This device'),
+              subtitle: const Text('Pick a file from the phone'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_BackgroundSource.device),
+            ),
+            if (_background != null)
+              ListTile(
+                key: const Key('edit-background-remove'),
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Remove background'),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(_BackgroundSource.remove),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    switch (source) {
+      case _BackgroundSource.gallery:
+        final ref = await showGalleryPickerSheet(
+          context,
+          title: 'Background for this character',
+          characterId: widget.character?.id,
+        );
+        if (ref != null && mounted) setState(() => _background = ref);
+      case _BackgroundSource.device:
+        final result = await FilePicker.pickFiles(
+          type: FileType.image,
+          withData: true,
+        );
+        final bytes = result?.files.firstOrNull?.bytes;
+        if (bytes == null || bytes.isEmpty || !mounted) return;
+        final ref = await context.read<AppState>().storePicture(bytes);
+        if (!mounted) return;
+        if (ref == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('That picture could not be stored.')),
+          );
+          return;
+        }
+        setState(() => _background = ref);
+      case _BackgroundSource.remove:
+        setState(() => _background = null);
+    }
   }
 
   /// The avatar to persist / preview: a typed URL wins, then a freshly picked
@@ -153,6 +234,7 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
     character
       ..name = _name.text.trim()
       ..avatar = avatar
+      ..backgroundImage = _background?.trim() ?? ''
       ..description = _description.text.trim()
       ..personality = _personality.text.trim()
       ..scenario = _scenario.text.trim()
@@ -197,6 +279,7 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
             _field(_avatar, 'Avatar image URL',
                 hint: 'Optional — https://…'),
             _field(_tags, 'Tags', hint: 'Comma-separated'),
+            _backgroundRow(),
             const _SectionLabel('Persona'),
             _field(_description, 'Description', lines: 4),
             _field(_personality, 'Personality', lines: 2),
@@ -262,6 +345,54 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
                   label: const Text('Remove'),
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The background row: a preview of what is set, a tap for the source sheet.
+  Widget _backgroundRow() {
+    final scheme = Theme.of(context).colorScheme;
+    final provider = _background == null
+        ? null
+        : avatarImage(
+            _background!,
+            displaySize: 96,
+            devicePixelRatio: MediaQuery.maybeDevicePixelRatioOf(context) ?? 1,
+          );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            key: const Key('edit-background-card'),
+            contentPadding: EdgeInsets.zero,
+            leading: SizedBox(
+              width: 48,
+              height: 48,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: scheme.surfaceContainerHighest,
+                  image: provider == null
+                      ? null
+                      : DecorationImage(image: provider, fit: BoxFit.cover),
+                ),
+                child: provider == null
+                    ? Icon(Icons.image_outlined, color: scheme.onSurfaceVariant)
+                    : null,
+              ),
+            ),
+            title: const Text('Chat background'),
+            subtitle: Text(
+              _background == null
+                  ? 'Chats with this character wear their usual style'
+                  : 'A picture of this character\'s own',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _pickBackground,
           ),
         ],
       ),
@@ -371,6 +502,9 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
     );
   }
 }
+
+/// Where a character's chat background comes from.
+enum _BackgroundSource { gallery, device, remove }
 
 /// A quiet run-in heading between field groups.
 class _SectionLabel extends StatelessWidget {

@@ -281,7 +281,11 @@ class CharacterCodec {
       ..titleShown =
           ours['titleShown'] as bool? ?? (ours['title']?.toString().trim().isNotEmpty ?? false)
       ..scenarios = Character.characterScenarioList(ours['scenarios'])
-      ..theme = CharacterTheme.fromJson(ours['theme']);
+      ..theme = CharacterTheme.fromJson(ours['theme'])
+      // A `local:` ref means nothing outside the device that made it, so only
+      // an URL background survives a card export — everything else goes back
+      // to "the chat wears its own style".
+      ..backgroundImage = ours['backgroundImage']?.toString() ?? '';
     return CharacterBundle(character, books);
   }
 
@@ -314,6 +318,11 @@ class CharacterCodec {
       if (c.scenarios.isNotEmpty)
         'scenarios': c.scenarios.map((s) => s.toJson()).toList(),
       'theme': ?c.theme.toJson(),
+      // URL-only, deliberately: a `local:<file>` ref points into this device's
+      // picture store and is meaningless (and unopenable) in somebody else's
+      // app. The chat-screen fallback chain covers the rest.
+      if (c.backgroundImage.startsWith('http'))
+        'backgroundImage': c.backgroundImage,
       // The second and later books: a card has exactly one `character_book`, and
       // dropping the rest would make "exports with its lorebooks" a half-truth.
       if (books.length > 1)

@@ -109,6 +109,7 @@ void main() {
         titleShown: true,
         lorebookIds: const ['b'],
         theme: const CharacterTheme(seedColor: 0xFF00FF00),
+        backgroundImage: 'local:bg.png',
         scenarios: [CharacterScenario(id: 's', text: 'x', greetings: const [2])],
       );
       final copy = card.clone();
@@ -116,6 +117,7 @@ void main() {
       expect(copy.titleShown, isTrue);
       expect(copy.lorebookIds, ['b']);
       expect(copy.theme.seedColor, 0xFF00FF00);
+      expect(copy.backgroundImage, 'local:bg.png');
       expect(copy.scenarios.single.greetings, [2]);
       // Deep: editing the copy must not reach the original.
       copy.scenarios.single.greetings.add(3);
@@ -364,6 +366,24 @@ void main() {
       );
       final cards = CharacterCodec.parseCards(_bytes(text));
       expect(cards.single.name, 'Serina');
+    });
+
+    test('an URL background rides a card export; a local ref does not', () {
+      final url = Character(id: 'c', name: 'Serina')
+        ..backgroundImage = 'https://example.com/scene.png';
+      final back = CharacterCodec.parseBundleJson(
+        CharacterCodec.exportTavernV2(url),
+      ).character;
+      expect(back.backgroundImage, 'https://example.com/scene.png');
+
+      // A `local:` ref points into this device's picture store; carrying it
+      // would only ever read as a broken picture somewhere else.
+      final local = Character(id: 'c', name: 'Serina')
+        ..backgroundImage = 'local:scene.png';
+      final round = CharacterCodec.parseBundleJson(
+        CharacterCodec.exportTavernV2(local),
+      ).character;
+      expect(round.backgroundImage, isEmpty);
     });
   });
 

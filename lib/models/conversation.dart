@@ -253,6 +253,7 @@ class Conversation {
     backgroundImage ?? '',
     ...characterOverrides.values.map((o) => o.avatar),
     ...characterOverrides.values.expand((o) => o.avatars),
+    ...characterOverrides.values.map((o) => o.backgroundImage),
     ...avatarOverrides.values,
     // A chat with its own copy of the interface has its own copy of
     // whatever pictures that copy names.

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maichat/models/character.dart';
 import 'package:maichat/models/chat_interface.dart';
 import 'package:maichat/models/conversation.dart';
 import 'package:maichat/services/avatar_store.dart';
@@ -150,6 +151,25 @@ void main() {
       filesOnDisk(),
       1,
       reason: 'the composer claims this picture, so it must be kept',
+    );
+  });
+
+  test("a character's chat background survives the next sweep", () async {
+    final state = await boot();
+    final ref = await state.storePicture(_png);
+    expect(ref, isNotNull, reason: 'the picture should have been filed');
+    await state.addCharacter(
+      Character(id: 'c1', name: 'Aria', backgroundImage: ref!),
+    );
+    expect(filesOnDisk(), 1);
+
+    // A fresh app over the same store and the same directory: init sweeps.
+    final reopened = await reopen();
+    expect(reopened.characterById('c1')?.backgroundImage, ref);
+    expect(
+      filesOnDisk(),
+      1,
+      reason: 'the card claims this picture, so it must be kept',
     );
   });
 

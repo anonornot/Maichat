@@ -29,6 +29,23 @@ void main() {
     expect(restored.messages[0].isUser, isTrue);
   });
 
+  test('a character background round-trips, and is omitted when unset', () {
+    final withBackground = Character(id: 'c', name: 'Aria')
+      ..backgroundImage = 'local:bg.png';
+    final read = Character.fromJson(withBackground.toJson());
+    expect(read.backgroundImage, 'local:bg.png');
+
+    // A card that never had one writes no key — a clean store is worth more
+    // than a null spelled out.
+    final bare = Character(id: 'c', name: 'Aria');
+    expect(bare.toJson().containsKey('backgroundImage'), isFalse);
+    expect(Character.fromJson(bare.toJson()).backgroundImage, '');
+
+    // Setting it back to empty is the same as never having had one.
+    read.backgroundImage = '  ';
+    expect(read.toJson().containsKey('backgroundImage'), isFalse);
+  });
+
   test('retitleFrom collapses whitespace and truncates long prompts', () {
     final short = Conversation.empty()..retitleFrom('  hello   there \n');
     expect(short.title, 'hello there');

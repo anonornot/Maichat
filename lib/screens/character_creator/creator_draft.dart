@@ -84,6 +84,7 @@ class CreatorDraft extends ChangeNotifier {
         version = TextEditingController(text: source?.characterVersion ?? ''),
         titleShown = source?.titleShown ?? false,
         theme = source?.theme ?? CharacterTheme.none,
+        backgroundImage = source?.backgroundImage ?? '',
         tags = (source?.tags ?? const <String>[]).toSet(),
         lorebookIds = (source?.lorebookIds ?? const <String>[]).toList() {
     pictures = _poolOf([
@@ -165,6 +166,17 @@ class CreatorDraft extends ChangeNotifier {
   }
 
   CharacterTheme theme;
+
+  /// The background picture for chats with this card — a ref picked from the
+  /// gallery or the device while the draft is open, empty to wear whatever the
+  /// chat's own style says. Never base64: both pickers hand back stored refs
+  /// (a device file goes through `AppState.storePicture` on the spot).
+  String backgroundImage;
+
+  void setBackground(String ref) {
+    backgroundImage = ref.trim();
+    notifyListeners();
+  }
 
   final Set<String> tags;
 
@@ -364,6 +376,7 @@ class CreatorDraft extends ChangeNotifier {
       ..scenarios = keptScenarios
       ..lorebookIds = lorebookIds.toList()
       ..theme = theme
+      ..backgroundImage = backgroundImage.trim()
       ..firstMes = filled.isEmpty ? '' : filled.first
       ..alternateGreetings = filled.skip(1).toList()
       ..mesExample = example.text.trim()

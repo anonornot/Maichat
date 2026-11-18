@@ -793,7 +793,7 @@ Future<Map<String, StoreEntry>> sanitizeStorePictures(
 }) async {
   final out = <String, StoreEntry>{...store};
 
-  // 1. Characters: character.avatar and character.avatars
+  // 1. Characters: character.avatar, character.avatars and character.backgroundImage
   final charactersEntry = out['characters'];
   if (charactersEntry != null && charactersEntry.asList is List) {
     var changed = false;
@@ -809,6 +809,14 @@ Future<Map<String, StoreEntry>> sanitizeStorePictures(
         final adopted = await adoptPicture(avatar);
         if (adopted != avatar) {
           character['avatar'] = adopted;
+          changed = true;
+        }
+      }
+      final characterBackground = character['backgroundImage'];
+      if (characterBackground is String && characterBackground.isNotEmpty) {
+        final adopted = await adoptPicture(characterBackground);
+        if (adopted != characterBackground) {
+          character['backgroundImage'] = adopted;
           changed = true;
         }
       }
@@ -841,7 +849,8 @@ Future<Map<String, StoreEntry>> sanitizeStorePictures(
     }
   }
 
-  // 2. Conversations: characterOverrides (avatar & avatars), backgroundImage
+  // 2. Conversations: characterOverrides (avatar, avatars & backgroundImage),
+  //    backgroundImage
   final conversationsEntry = out['conversations'];
   if (conversationsEntry != null && conversationsEntry.asList is List) {
     var changed = false;
@@ -876,6 +885,14 @@ Future<Map<String, StoreEntry>> sanitizeStorePictures(
             final adopted = await adoptPicture(oAvatar);
             if (adopted != oAvatar) {
               overrideChar['avatar'] = adopted;
+              overridesChanged = true;
+            }
+          }
+          final oBackground = overrideChar['backgroundImage'];
+          if (oBackground is String && oBackground.isNotEmpty) {
+            final adopted = await adoptPicture(oBackground);
+            if (adopted != oBackground) {
+              overrideChar['backgroundImage'] = adopted;
               overridesChanged = true;
             }
           }

@@ -50,6 +50,7 @@ class Character {
     List<CharacterScenario>? scenarios,
     List<String>? lorebookIds,
     this.theme = CharacterTheme.none,
+    this.backgroundImage = '',
     this.firstMes = '',
     List<String>? alternateGreetings,
     this.mesExample = '',
@@ -140,6 +141,12 @@ class Character {
 
   /// This character's own palette, or [CharacterTheme.none] to wear the app's.
   CharacterTheme theme;
+
+  /// A background picture for chats with this character — an `http(s)` URL or a
+  /// `local:<file>` ref into the picture store, empty when the chat wears
+  /// whatever its own style says. The chat screen is the one place that ranks
+  /// it: the chat's own background first, then this, then the interface's.
+  String backgroundImage;
 
   /// The opening line the character sends (SillyTavern `first_mes`, Agnai
   /// `greeting`).
@@ -375,6 +382,7 @@ class Character {
         scenarios: scenarios.map((s) => s.clone()).toList(),
         lorebookIds: List<String>.from(lorebookIds),
         theme: theme,
+        backgroundImage: backgroundImage,
         firstMes: firstMes,
         alternateGreetings: List<String>.from(alternateGreetings),
         mesExample: mesExample,
@@ -413,6 +421,7 @@ class Character {
           'scenarios': scenarios.map((s) => s.toJson()).toList(),
         if (lorebookIds.isNotEmpty) 'lorebookIds': lorebookIds,
         'theme': ?theme.toJson(),
+        if (backgroundImage.trim().isNotEmpty) 'backgroundImage': backgroundImage,
         'firstMes': firstMes,
         'alternateGreetings': alternateGreetings,
         'mesExample': mesExample,
@@ -446,6 +455,7 @@ class Character {
         scenarios: characterScenarioList(json['scenarios']),
         lorebookIds: _stringList(json['lorebookIds']),
         theme: CharacterTheme.fromJson(json['theme']),
+        backgroundImage: json['backgroundImage'] as String? ?? '',
         firstMes: json['firstMes'] as String? ?? '',
         alternateGreetings: _stringList(json['alternateGreetings']),
         mesExample: json['mesExample'] as String? ?? '',

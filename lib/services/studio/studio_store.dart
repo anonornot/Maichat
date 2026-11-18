@@ -92,6 +92,7 @@ class StudioStore {
       refs
         ..add(c.avatar)
         ..addAll(c.avatars)
+        ..add(c.backgroundImage)
         ..addAll(session.workspace.lorebooks.map((b) => b.thumbnail));
       for (final m in [
         ...session.transcript,

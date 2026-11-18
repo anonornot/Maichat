@@ -5,6 +5,7 @@ import '../../services/character_writer.dart';
 import '../../state/app_state.dart';
 import '../../widgets/tag_editor_sheet.dart';
 import 'creator_ai_sheet.dart';
+import 'creator_background_sheet.dart';
 import 'creator_controls.dart';
 import 'creator_draft.dart';
 
@@ -25,6 +26,8 @@ class IdentityTab extends StatelessWidget {
           controller: draft.name,
         ),
         _TitleSection(draft: draft),
+        const Divider(height: 28),
+        CharacterBackgroundCard(draft: draft),
         const Divider(height: 28),
         const CreatorLabel('Tags'),
         _TagsSection(draft: draft),
